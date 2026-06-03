@@ -4,9 +4,75 @@
 
 ## 2. Project Description
 
+This project focuses on the e-commerce domain and aims to analyze historical customer behavior data from an online multi-category store.
+
+The system was built as a Big Data Batch Processing Pipeline using Hadoop HDFS, Apache Spark, and Streamlit. The pipeline processes large-scale e-commerce event data containing product views, cart additions, and purchase transactions to generate business insights.
+
+The workflow begins by storing the dataset in HDFS. Apache Spark then performs batch processing to aggregate and analyze customer behavior, product performance and sales metrics. The processed results are saved as output files and visualized through a Streamlit dashboard, allowing users to explore the findings more easily.
+
+The system will transforms raw e-commerce event logs into meaningful business insights such as revenue contribution, customer engagement patterns and conversion performance.
+
 ## 3. Problem Statement
 
+E-commerce businesses collect massive amounts of customers interaction data every day. However, raw event data alone provides little value unless it is transformed into actionable insights that support business decision making.
+
+This project aims to answer the following business questions:
+
+**Batch Insights**
+
+**1. Which product categories generate the highest purchase revenue?**
+
+This helps businesses identify their most profitable categories and prioritize inventory, promotions and marketing efforts
+
+**2. Which brands contribute the most to overall sales revenue?**
+
+This allows businesses to understand which brands are driving customer purchases and revenue growth
+
+**3. Which product categories receive the highest number of views?**
+
+This helps identify products that attract customer attention, even if they do not necessarily lead to purchases.
+
+**4. What is the conversion rate from product views to purchases?**
+
+This metric measures how effectively customer interest is converted into actual transactions.
+
+**5. What customer behavior patterns can be observed from historical e-commerce activities?**
+
+By analyzing views, cart additions, and purchases, businesses can better understand the customer purchasing journey.
+
 ## 4. Dataset Description
+
+This project uses the E-Commerce Behavior Data from Multi-Category Store dataset available on Kaggle.
+
+Dataset Source
+
+[Kaggle Dataset - E-Commerce Behavior Data from Multi-Category Store](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store?select=2019-Oct.csv)
+
+The dataset contains historical customer interaction records collected from a large online store. Each record represents a customer event, such as viewing a product, adding it to a cart or completing a purchase.
+
+For this project, a sampled version of the dataset is used to ensure efficient processing on a local machine.
+
+**Dataset Characteristics**
+- Domain: E-Commerce
+- Data Type: Customer Behavior Events
+- Data Explorer: 2019-Oct.csv
+- Format: CSV
+- Original Dataset Size: 5.67 GB (More than 286 million events across multiple months)
+- Sample Dataset Size: 100,000 records (used in this project)
+
+**Key Fields Used**
+
+| Field | Description |
+|---------|-------------|
+| event_time | Timestamp when the event occurred |
+| event_type | Type of customer action (view, cart, purchase) |
+| product_id | Unique product identifier |
+| category_id | Product category identifier |
+| category_code | Product category name |
+| brand | Product brand |
+| price | Product price |
+| user_id | Unique customer identifier |
+| user_session | Session identifier for customer activity |
 
 ## 5. How to Run
 
@@ -356,3 +422,9 @@ docker ps
 
 No project containers should remain running.
 
+
+## 6. Expected Output
+
+## 7. Findings & Conclusion
+
+## 8. Known Limitations
