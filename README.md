@@ -120,16 +120,11 @@ Using LF prevents compatibility issues when running Hadoop, Spark, and Docker co
 ### STEP 1 - Clone the Repository
 Open Terminal (Mac/Linux) or PowerShell (Windows).
 
+
 Run : 
 
 ```bash
 git clone https://github.com/KeweKiwi/BDP-FinalProject-Group-1
-```
-
-Move into the project folder:
-
-```bash
-cd bdp-final-project
 ```
 
 Verify the files exist: 
