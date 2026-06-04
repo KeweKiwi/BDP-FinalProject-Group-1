@@ -14,31 +14,32 @@ The system will transforms raw e-commerce event logs into meaningful business in
 
 ## 3. Problem Statement
 
-E-commerce businesses collect massive amounts of customers interaction data every day. However, raw event data alone provides little value unless it is transformed into actionable insights that support business decision making.
+E-commerce platforms generate large volumes of customer interaction data, including product views, cart additions, and purchases. Analyzing these historical records can help businesses understand customer behavior, identify high-performing products, and evaluate sales performance.
 
-This project aims to answer the following business questions:
+This project aims to build a batch processing pipeline that analyzes historical e-commerce behavior data using HDFS and Spark SQL. The processed analytical tables are stored back into HDFS and visualized through a Streamlit dashboard to support business decision-making.
+The system is designed to answer the following business questions:
 
 **Batch Insights**
 
 **1. Which product categories generate the highest purchase revenue?**
 
-This helps businesses identify their most profitable categories and prioritize inventory, promotions and marketing efforts
+This helps businesses identify their most profitable categories and prioritize inventory, promotions, and marketing efforts.
 
-**2. Which brands contribute the most to overall sales revenue?**
+**2. Which brands contribute the most to total purchase revenue?**
 
 This allows businesses to understand which brands are driving customer purchases and revenue growth
 
-**3. Which product categories receive the highest number of views?**
+**3. What are the most viewed product categories?**
 
-This helps identify products that attract customer attention, even if they do not necessarily lead to purchases.
+This helps identify which categories attract the most customer attention, even if they do not necessarily lead to purchases.
 
 **4. What is the conversion rate from product views to purchases?**
 
 This metric measures how effectively customer interest is converted into actual transactions.
 
-**5. What customer behavior patterns can be observed from historical e-commerce activities?**
+**5. How do customer actions progress across the funnel: view → cart → purchase?**
 
-By analyzing views, cart additions, and purchases, businesses can better understand the customer purchasing journey.
+This reveals where customers drop off in the purchasing journey and helps businesses optimize each stage of the funnel.
 
 ## 4. Dataset Description
 
@@ -58,7 +59,6 @@ For this project, a sampled version of the dataset is used to ensure efficient p
 - Data Explorer: 2019-Oct.csv
 - Format: CSV
 - Original Dataset Size: 5.67 GB (More than 286 million events across multiple months)
-- Sample Dataset Size: 100,000 records (used in this project)
 
 **Key Fields Used**
 
