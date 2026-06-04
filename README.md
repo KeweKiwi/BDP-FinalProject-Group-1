@@ -1,7 +1,7 @@
 # E-Commerce Customer Behavior Analytics Using Big Data Batch Processing
 
 ## 1. Architecture Diagram
-
+yes
 ## 2. Project Description
 
 This project focuses on the e-commerce domain and aims to analyze historical customer behavior data from an online multi-category store.
