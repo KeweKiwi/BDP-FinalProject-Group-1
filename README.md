@@ -143,6 +143,25 @@ jobs/
 dashboard/
 ```
 
+Once the repository is pulled, create new branch
+
+```bash
+git checkout -b your-name
+```
+
+Make sure you're in the project directory:
+
+```bash
+cd bdp-finalproject-group-1
+source venv/bin/activate
+```
+
+Expected Output:
+
+```bash
+Terminal berada di folder bdp_finalproject dan prompt virtual environment aktif, biasanya ditandai dengan prefix seperti (venv).
+```
+
 ### STEP 2 - Start Hadoop and Spark Services
 
 Make sure Docker Desktop is already running.
@@ -153,7 +172,18 @@ Start all services:
 docker compose up -d
 ```
 
+Expected output:
+
+```bash
+Docker compose starts three containers:
+bdp-namenode
+bdp-datanode
+bdp-spark
+```
+
 Wait 1–2 minutes until all containers finish starting.
+
+**Open new terminal**
 
 Check container status:
 
@@ -164,10 +194,9 @@ docker ps
 Expected output:
 
 ```bash
-namenode
-datanode
-spark-master
-spark-worker
+bdp-namenode
+bdp-datanode
+bdp-spark
 ```
 
 All containers should show:
@@ -176,7 +205,35 @@ All containers should show:
 STATUS: Up
 ```
 
-### STEP 3 - Verify HDFS is Running
+### STEP 3 - Check DataNode Health
+
+Check DataNode connect to NameNode
+
+```bash
+docker exec -it bdp-namenode hdfs dfsadmin -report
+```
+
+Expected Output:
+
+```bash
+live datanodes (1)
+```
+
+### STEP 4 - Open HDFS Web UI
+
+Browser:
+
+```bash
+http://localhost:9870
+```
+
+Expected Output:
+
+```bash
+Hadoop NameNode UI Status = active
+```
+
+### STEP 5 - Verify HDFS is Running
 
 Open the Hadoop NameNode container: 
 
@@ -202,27 +259,7 @@ Exit:
 exit
 ```
 
-### STEP 4 - Create a Folder in HDFS
-
-Create a folder for this project: 
-
-```bash
-docker exec -it namenode hdfs dfs -mkdir -p /user/ecommerce
-```
-
-Verify:
-
-```bash
-docker exec -it namenode hdfs dfs -ls /user
-```
-
-Expected Output:
-
-```bash
-ecommerce
-```
-
-### STEP 5 - Download the Dataset
+### STEP 6 - Download the Dataset
 
 Download the dataset from Kaggle: [eCommerce behavior data](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store?select=2019-Oct.csv)
 
@@ -246,156 +283,226 @@ project/
     └── 2019-Oct.csv
 ```
 
-### STEP 6 - Create a Smaller Sample Dataset
-
-The original dataset is very large.
-
-Create a sample containing 100,000 rows:
-
-Mac/Linux: 
+### STEP 7 - Copy Dataset to NameNode Container
 
 ```bash
-head -100001 data/2019-Oct.csv > data/sample_data.csv
+docker cp data/2019-Oct.csv bdp-namenode:/2019-Oct.csv
+docker exec -it bdp-namenode ls -lh /2019-Oct.csv
 ```
 
-Windows PowerShell:
+Expected Output:
+```bash
+File /2019-Oct.csv 5.3 GB
+```
+
+### STEP 8 - Create a Raw Folder in HDFS
+
+Create a folder for this project: 
 
 ```bash
-Get-Content data\2019-Oct.csv -TotalCount 100001 | Set-Content data\sample_data.csv
+docker exec -it bdp-namenode hdfs dfs -mkdir -p /user/bdp/raw
 ```
 
-Verify: 
+Verify:
 
 ```bash
-ls data
+docker exec -it namenode hdfs dfs -ls /user
 ```
 
-Expected:
+Expected Output:
 
 ```bash
-2019-Oct.csv
-sample_data.csv
+bdp/raw
 ```
 
-### STEP 7 - Upload Dataset into HDFS
-
-Copy the dataset into the NameNode container:
-
-```bash
-docker cp data/sample_data.csv namenode:/tmp/sample_data.csv
-```
+### STEP 9 - Upload Dataset into HDFS
 
 Upload to HDFS:
 
 ```bash
-docker exec -it namenode hdfs dfs -put -f /tmp/sample_data.csv /user/ecommerce/
+docker exec -it bdp-namenode hdfs dfs -put -f /2019-Oct.csv /user/bdp/raw/2019-Oct.csv
 ```
 
 Verify Upload:
 
 ```bash
-docker exec -it namenode hdfs dfs -ls /user/ecommerce
+docker exec -it bdp-namenode hdfs dfs -ls -h /user/bdp/raw
 ```
 Expected:
 
 ```bash
-sample_data.csv
+Found 1 items
+-rw-r--r--   3 root supergroup      5.3 G ... /user/bdp/raw/2019-Oct.csv
 ```
 
-### STEP 8 - Verify Dataset exists in HDFS
+### STEP 10 - Verify Spark Container
 
 Run:
 
 ```bash
-docker exec -it namenode hdfs dfs -du -h /user/ecommerce/sample_data.csv
+docker exec -it bdp-spark /opt/spark/bin/spark-submit --version
 ```
 Expected: 
 
 ```bash
-XX MB
+Spark version 3.5.1
 ```
 
 This confirms the dataset is stored successfully inside HDFS
 
-### STEP 9 - Run Spark Batch Analysis
+### STEP 11 - Run Spark SQL Batch Job
 
-Open a new terminal:
+Spark runs inside the bdp-spark container so it shares the same Docker network as HDFS. This is why the HDFS path in the script uses hdfs://namenode:9000 instead of localhost.
 
 ```bash
-python jobs/batch_analysis.py
+docker exec -it bdp-spark /opt/spark/bin/spark-submit /app/jobs/batch_hdfs_sql_analysis.py
 ```
-
-The Spark job will:
-1. Read dataset from HDFS
-2. Analyze customer behavior
-3. Calculate revenue metrics
-4. Generate output files
 
 Expected output:
 
 ```bash
-Loading dataset...
-
-Calculating event statistics...
-
-Calculating top categories...
-
-Calculating top brands...
-
-Calculating conversion rate...
-
-Job completed successfully.
+Spark job starts reading the raw dataset from HDFS, creates temporary views,
+executes SQL queries, saves processed tables back to HDFS,
+and generates local CSV files for the dashboard.
 ```
 
-### STEP 10 - Verify Analysis Output
+This confirms Spark successfully connected to HDFS, processed the dataset, and wrote the output to the designated locations.
 
-Check the output folder:
-
-```bash
-ls output/
-```
+### STEP 12 - Expected Spark Console Output
 
 Expected:
 
 ```bash
-event_type_count.csv
-top_categories.csv
-top_brands.csv
-conversion_rate.csv
-summary_metrics.csv
+=== Dataset Schema ===
+root
+ |-- event_time: timestamp
+ |-- event_type: string
+ |-- product_id: integer
+ |-- category_id: long
+ |-- category_code: string
+ |-- brand: string
+ |-- price: double
+ |-- user_id: integer
+ |-- user_session: string
+ 
+=== Event Type Count Table ===
++----------+------------+
+|event_type|total_events|
++----------+------------+
+|view      |40779399    |
+|cart      |926516      |
+|purchase  |742849      |
++----------+------------+
+ 
+=== Query 1: Category Revenue Table ===
+Top category:
+electronics.smartphone
+total_revenue = $157,049,623.37
+purchase_count = 338,018
+ 
+=== Query 2: Brand Revenue Table ===
+Top brand:
+apple
+total_revenue = $111,209,268.82
+purchase_count = 142,873
+ 
+=== Query 3: Most Viewed Category Table ===
+Top viewed category:
+electronics.smartphone
+view_count = 10,619,448
+ 
+=== Query 4: Conversion Rate Table ===
++-----------+---------------+--------------------------+
+|total_views|total_purchases|conversion_rate_percentage|
++-----------+---------------+--------------------------+
+|40779399   |742849         |1.82                      |
++-----------+---------------+--------------------------+
+ 
+=== Query 5: Funnel Summary Table ===
+view      40,779,399
+cart         926,516
+purchase     742,849
+ 
+=== Batch SQL Processing Completed ===
 ```
 
-These files contain the processed results from Spark.
 
-### STEP 11 - Start the Dashboard
+### STEP 13 - Verify Processed Tables in HDFS
 
-Open a new terminal.
+This command proves that Spark SQL successfully created analytical tables and saved them back to HDFS.
 
-Run:
+```bash
+docker exec -it bdp-namenode hdfs dfs -ls -h /user/bdp/processed
+```
+
+Expected output: 
+
+```bash
+event_type_count_table
+category_revenue_table
+brand_revenue_table
+most_viewed_category_table
+conversion_rate_table
+funnel_summary_table
+```
+
+### STEP 14 - Verify Local Dashboard CSV Output
+
+Local CSV is created so that Streamlit running on the host can read the analysis results easily.
+
+```bash
+ls -lh output/dashboard
+```
+
+Expected Output:
+
+```bash
+event_type_count_table.csv
+category_revenue_table.csv
+brand_revenue_table.csv
+most_viewed_category_table.csv
+conversion_rate_table.csv
+funnel_summary_table.csv
+```
+
+### STEP 15 - Requirements
+
+Dashboard/requirements.txt should contain:
+
+```bash
+streamlit
+pandas
+plotly
+```
+
+This file ensures that the dashboard can be run in the new environment after the repository is cloned.
+
+### STEP 16 - Run Streamlit Dashboard
+
+Run the Streamlit dashboard after the Spark SQL batch processing is complete and the output files inside output/dashboard/*.csv are available.
+
+Install the dashboard dependencies:
+
+```bash
+pip install -r dashboard/requirements.txt
+```
+
+Launch the dashboard: 
 
 ```bash
 streamlit run dashboard/app.py
 ```
 
-Wait until Streamlit starts.
-
-Expected output: 
-
-```bash
-Local URL: http://localhost:8501
-```
-
-### STEP 12 - Open Dashboard
-
-Open your browser.
-
-Go to:
+Open the dashboard in your browser:
 
 ```bash
 http://localhost:8501
 ```
 
-### STEP 13 - Stop the Project
+Expected Output:
+FOTOOOO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+### STEP 14 - Stop the Project
 
 To stop the dashboard:
 
