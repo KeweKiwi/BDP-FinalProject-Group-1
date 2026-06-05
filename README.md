@@ -18,9 +18,6 @@ flowchart TD
     G --> H["Final Insights<br/>Revenue, Views, Conversion, Funnel"]
 ```
 
-> Screenshot placeholder:
-> Add HDFS Web UI or architecture screenshot here.
->
 > ![HDFS Web UI](screenshots/hdfs_web_ui.png)
 
 ## 2. Project Description
