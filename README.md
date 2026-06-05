@@ -252,13 +252,9 @@ dir data\2019-Oct.csv
 
 Expected output:
 
-```text
 The file exists and the size is around 5.3GB.
-```
 
-> Screenshot placeholder:
-> Add screenshot showing the local dataset file.
->
+
 > ![Local Dataset](screenshots/local_dataset.png)
 
 ### Step 4 - Start Docker Services
