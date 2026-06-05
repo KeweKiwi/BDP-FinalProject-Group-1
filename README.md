@@ -620,7 +620,8 @@ Final batch results from the full October 2019 dataset:
 * Raw source value: `electronics.smartphone`
 * Top product revenue: $157,049,623.37
 * Top product purchase count: 338,018
-* Top revenue brand: apple
+* Top revenue brand: Apple
+* Raw source value: `apple`
 * Top brand revenue: $111,209,268.82
 * Top brand purchase count: 142,873
 * Most viewed product: Smartphone
