@@ -9,6 +9,7 @@ import os
 # =========================
 st.set_page_config(
     page_title="E-Commerce Batch Analytics Dashboard",
+    page_icon=":bar_chart:",
     layout="wide"
 )
 
@@ -17,7 +18,6 @@ st.set_page_config(
 # =========================
 DASHBOARD_DIR = "output/dashboard"
 
-EVENT_TYPE_PATH = f"{DASHBOARD_DIR}/event_type_count_table.csv"
 CATEGORY_REVENUE_PATH = f"{DASHBOARD_DIR}/category_revenue_table.csv"
 BRAND_REVENUE_PATH = f"{DASHBOARD_DIR}/brand_revenue_table.csv"
 MOST_VIEWED_CATEGORY_PATH = f"{DASHBOARD_DIR}/most_viewed_category_table.csv"
@@ -34,10 +34,26 @@ EVENT_COLOR_MAP = {
     "purchase": "#2ECC71"
 }
 
+EVENT_LABEL_MAP = {
+    "view": "Product Views",
+    "cart": "Cart Additions",
+    "purchase": "Purchases"
+}
+
+BRAND_LABEL_OVERRIDES = {
+    "lg": "LG",
+    "hp": "HP",
+    "oppo": "OPPO",
+    "asus": "ASUS",
+    "msi": "MSI"
+}
+
 CHART_COLORS = {
     "category_revenue": "#4A90E2",
     "brand_revenue": "#F5A623",
-    "most_viewed": "#9B59B6"
+    "most_viewed": "#9B59B6",
+    "product_value": "#00A6A6",
+    "brand_value": "#EF476F"
 }
 
 
@@ -79,6 +95,103 @@ def format_million_currency(value):
     return f"${float(value) / 1_000_000:.1f}M"
 
 
+def render_metric_card(label, value, delta=None):
+    with st.container(border=True):
+        st.metric(label, value, delta)
+
+
+def apply_chart_layout(fig, height=520, left_margin=140, right_margin=90):
+    fig.update_layout(
+        height=height,
+        margin=dict(l=left_margin, r=right_margin, t=80, b=60),
+        bargap=0.28,
+        showlegend=False,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        title=dict(x=0, xanchor="left"),
+        hoverlabel=dict(font_size=13)
+    )
+
+
+def format_label_token(value):
+    return str(value).replace("_", " ").replace("-", " ").strip().title()
+
+
+def format_category_label(category_code):
+    if pd.isna(category_code):
+        return "Unknown Product"
+
+    parts = [
+        part.strip()
+        for part in str(category_code).split(".")
+        if part.strip()
+    ]
+
+    if not parts:
+        return "Unknown Product"
+
+    return format_label_token(parts[-1])
+
+
+def format_brand_label(brand):
+    if pd.isna(brand):
+        return "Unknown Brand"
+
+    normalized_brand = str(brand).strip()
+
+    if not normalized_brand:
+        return "Unknown Brand"
+
+    brand_key = normalized_brand.lower()
+
+    if brand_key in BRAND_LABEL_OVERRIDES:
+        return BRAND_LABEL_OVERRIDES[brand_key]
+
+    return format_label_token(normalized_brand)
+
+
+def format_event_type_label(event_type):
+    event_key = str(event_type).strip().lower()
+    return EVENT_LABEL_MAP.get(event_key, format_label_token(event_key))
+
+
+def build_revenue_display_table(df, source_column, display_column, label_formatter):
+    return pd.DataFrame({
+        display_column: df[source_column].apply(label_formatter),
+        "Total Revenue": df["total_revenue"].apply(format_currency),
+        "Purchases": df["purchase_count"].apply(format_number),
+        "Average Purchase Price": df["average_purchase_price"].apply(format_currency)
+    })
+
+
+def build_viewed_category_display_table(df):
+    return pd.DataFrame({
+        "Product": df["category_code"].apply(format_category_label),
+        "Views": df["view_count"].apply(format_number)
+    })
+
+
+def build_purchase_value_display_table(
+    df,
+    source_column,
+    display_column,
+    label_formatter
+):
+    return pd.DataFrame({
+        display_column: df[source_column].apply(label_formatter),
+        "Average Purchase Price": df["average_purchase_price"].apply(format_currency),
+        "Purchases": df["purchase_count"].apply(format_number),
+        "Total Revenue": df["total_revenue"].apply(format_currency)
+    })
+
+
+def build_funnel_display_table(df):
+    return pd.DataFrame({
+        "Journey Stage": df["event_type"].apply(format_event_type_label),
+        "Event Count": df["event_count"].apply(format_number)
+    })
+
+
 def add_rank_column(df, rank_column_name="No"):
     display_df = df.reset_index(drop=True).copy()
     display_df.insert(0, rank_column_name, display_df.index + 1)
@@ -88,7 +201,6 @@ def add_rank_column(df, rank_column_name="No"):
 # =========================
 # Load Processed Tables
 # =========================
-event_type_df = load_csv(EVENT_TYPE_PATH)
 category_revenue_df = load_csv(CATEGORY_REVENUE_PATH)
 brand_revenue_df = load_csv(BRAND_REVENUE_PATH)
 most_viewed_category_df = load_csv(MOST_VIEWED_CATEGORY_PATH)
@@ -109,10 +221,9 @@ st.caption(
 # Validate Required Tables
 # =========================
 required_tables = {
-    "Event Type Count Table": event_type_df,
-    "Category Revenue Table": category_revenue_df,
+    "Product Revenue Table": category_revenue_df,
     "Brand Revenue Table": brand_revenue_df,
-    "Most Viewed Category Table": most_viewed_category_df,
+    "Most Viewed Product Table": most_viewed_category_df,
     "Conversion Rate Table": conversion_rate_df,
     "Funnel Summary Table": funnel_summary_df,
 }
@@ -151,34 +262,50 @@ else:
     top_brand = brand_revenue_df.iloc[0]
     most_viewed_category = most_viewed_category_df.iloc[0]
 
+    top_category_label = format_category_label(top_category["category_code"])
+    top_brand_label = format_brand_label(top_brand["brand"])
+    most_viewed_category_label = format_category_label(
+        most_viewed_category["category_code"]
+    )
+
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric("Total Views", format_number(total_views))
-    col2.metric("Cart Additions", format_number(total_cart))
-    col3.metric("Total Purchases", format_number(total_purchases))
-    col4.metric("Conversion Rate", f"{conversion_rate:.2f}%")
+    with col1:
+        render_metric_card("Total Views", format_number(total_views))
+
+    with col2:
+        render_metric_card("Cart Additions", format_number(total_cart))
+
+    with col3:
+        render_metric_card("Total Purchases", format_number(total_purchases))
+
+    with col4:
+        render_metric_card("Conversion Rate", f"{conversion_rate:.2f}%")
 
     st.divider()
 
     col5, col6, col7 = st.columns(3)
 
-    col5.metric(
-        "Top Revenue Category",
-        str(top_category["category_code"]),
-        format_currency(top_category["total_revenue"])
-    )
+    with col5:
+        render_metric_card(
+            "Top Revenue Product",
+            top_category_label,
+            format_currency(top_category["total_revenue"])
+        )
 
-    col6.metric(
-        "Top Revenue Brand",
-        str(top_brand["brand"]),
-        format_currency(top_brand["total_revenue"])
-    )
+    with col6:
+        render_metric_card(
+            "Top Revenue Brand",
+            top_brand_label,
+            format_currency(top_brand["total_revenue"])
+        )
 
-    col7.metric(
-        "Most Viewed Category",
-        str(most_viewed_category["category_code"]),
-        f"{format_number(most_viewed_category['view_count'])} views"
-    )
+    with col7:
+        render_metric_card(
+            "Most Viewed Product",
+            most_viewed_category_label,
+            f"{format_number(most_viewed_category['view_count'])} views"
+        )
 
     st.divider()
 
@@ -219,24 +346,32 @@ else:
 
     funnel_col1, funnel_col2, funnel_col3 = st.columns(3)
 
-    funnel_col1.metric(
-        "View-to-Cart Rate",
-        f"{view_to_cart_rate:.2f}%"
-    )
+    with funnel_col1:
+        render_metric_card(
+            "View-to-Cart Rate",
+            f"{view_to_cart_rate:.2f}%"
+        )
 
-    funnel_col2.metric(
-        "Cart-to-Purchase Rate",
-        f"{cart_to_purchase_rate:.2f}%"
-    )
+    with funnel_col2:
+        render_metric_card(
+            "Cart-to-Purchase Rate",
+            f"{cart_to_purchase_rate:.2f}%"
+        )
 
-    funnel_col3.metric(
-        "View-to-Purchase Rate",
-        f"{view_to_purchase_rate:.2f}%"
-    )
+    with funnel_col3:
+        render_metric_card(
+            "View-to-Purchase Rate",
+            f"{view_to_purchase_rate:.2f}%"
+        )
+
+    funnel_stage_labels = [
+        format_event_type_label(event_type)
+        for event_type in funnel_order
+    ]
 
     funnel_fig = go.Figure(
         go.Funnel(
-            y=["View", "Cart", "Purchase"],
+            y=funnel_stage_labels,
             x=[
                 view_count,
                 cart_count,
@@ -253,21 +388,28 @@ else:
         )
     )
 
+    funnel_fig.update_traces(
+        hovertemplate="<b>%{y}</b><br>Events: %{x:,}<extra></extra>"
+    )
+
+    apply_chart_layout(funnel_fig, height=500, left_margin=150)
+
     funnel_fig.update_layout(
         title="Customer Journey Funnel: View → Cart → Purchase",
         xaxis_title="Event Count",
-        yaxis_title="Customer Journey Stage",
-        height=500
+        yaxis_title="Customer Journey Stage"
     )
 
     st.plotly_chart(
         funnel_fig,
-        use_container_width=True
+        width="stretch"
     )
 
+    funnel_display_df = build_funnel_display_table(funnel_chart_df)
+
     st.dataframe(
-        add_rank_column(funnel_chart_df, "No"),
-        use_container_width=True,
+        add_rank_column(funnel_display_df, "No"),
+        width="stretch",
         hide_index=True
     )
 
@@ -281,9 +423,13 @@ else:
     left_col, right_col = st.columns(2)
 
     with left_col:
-        st.subheader("Top Product Categories by Purchase Revenue")
+        st.subheader("Top Products by Purchase Revenue")
 
         category_chart_df = category_revenue_df.head(10).copy()
+
+        category_chart_df["category_label"] = category_chart_df[
+            "category_code"
+        ].apply(format_category_label)
 
         category_chart_df["revenue_label"] = category_chart_df["total_revenue"].apply(
             format_million_currency
@@ -297,33 +443,47 @@ else:
         category_fig = px.bar(
             category_chart_df,
             x="total_revenue",
-            y="category_code",
+            y="category_label",
             orientation="h",
             text="revenue_label",
-            title="Top 10 Categories by Purchase Revenue"
+            title="Top 10 Products by Purchase Revenue",
+            labels={
+                "total_revenue": "Total Revenue",
+                "category_label": "Product"
+            }
         )
 
         category_fig.update_traces(
             marker_color=CHART_COLORS["category_revenue"],
             textposition="outside",
-            cliponaxis=False
+            cliponaxis=False,
+            hovertemplate="<b>%{y}</b><br>Total Revenue: %{x:$,.2f}<extra></extra>"
         )
+
+        apply_chart_layout(category_fig, height=520, left_margin=180)
 
         category_fig.update_layout(
             xaxis_title="Total Revenue",
-            yaxis_title="Product Category",
-            height=520,
-            margin=dict(l=180, r=100, t=80, b=60)
+            yaxis_title="Product"
         )
+
+        category_fig.update_xaxes(tickprefix="$", separatethousands=True)
 
         st.plotly_chart(
             category_fig,
-            use_container_width=True
+            width="stretch"
+        )
+
+        category_display_df = build_revenue_display_table(
+            category_revenue_df,
+            "category_code",
+            "Product",
+            format_category_label
         )
 
         st.dataframe(
-            add_rank_column(category_revenue_df, "Rank"),
-            use_container_width=True,
+            add_rank_column(category_display_df, "Rank"),
+            width="stretch",
             hide_index=True
         )
 
@@ -331,6 +491,10 @@ else:
         st.subheader("Top Brands by Purchase Revenue")
 
         brand_chart_df = brand_revenue_df.head(10).copy()
+
+        brand_chart_df["brand_label"] = brand_chart_df["brand"].apply(
+            format_brand_label
+        )
 
         brand_chart_df["revenue_label"] = brand_chart_df["total_revenue"].apply(
             format_million_currency
@@ -344,33 +508,47 @@ else:
         brand_fig = px.bar(
             brand_chart_df,
             x="total_revenue",
-            y="brand",
+            y="brand_label",
             orientation="h",
             text="revenue_label",
-            title="Top 10 Brands by Purchase Revenue"
+            title="Top 10 Brands by Purchase Revenue",
+            labels={
+                "total_revenue": "Total Revenue",
+                "brand_label": "Brand"
+            }
         )
 
         brand_fig.update_traces(
             marker_color=CHART_COLORS["brand_revenue"],
             textposition="outside",
-            cliponaxis=False
+            cliponaxis=False,
+            hovertemplate="<b>%{y}</b><br>Total Revenue: %{x:$,.2f}<extra></extra>"
         )
+
+        apply_chart_layout(brand_fig, height=520, left_margin=120)
 
         brand_fig.update_layout(
             xaxis_title="Total Revenue",
-            yaxis_title="Brand",
-            height=520,
-            margin=dict(l=120, r=100, t=80, b=60)
+            yaxis_title="Brand"
         )
+
+        brand_fig.update_xaxes(tickprefix="$", separatethousands=True)
 
         st.plotly_chart(
             brand_fig,
-            use_container_width=True
+            width="stretch"
+        )
+
+        brand_display_df = build_revenue_display_table(
+            brand_revenue_df,
+            "brand",
+            "Brand",
+            format_brand_label
         )
 
         st.dataframe(
-            add_rank_column(brand_revenue_df, "Rank"),
-            use_container_width=True,
+            add_rank_column(brand_display_df, "Rank"),
+            width="stretch",
             hide_index=True
         )
 
@@ -381,9 +559,13 @@ else:
     # =========================
     st.header("Browsing Behavior")
 
-    st.subheader("Most Viewed Product Categories")
+    st.subheader("Most Viewed Products")
 
     viewed_chart_df = most_viewed_category_df.head(10).copy()
+
+    viewed_chart_df["category_label"] = viewed_chart_df[
+        "category_code"
+    ].apply(format_category_label)
 
     viewed_chart_df["view_label"] = viewed_chart_df["view_count"].apply(
         lambda x: f"{int(x) / 1_000_000:.1f}M"
@@ -397,107 +579,203 @@ else:
     viewed_fig = px.bar(
         viewed_chart_df,
         x="view_count",
-        y="category_code",
+        y="category_label",
         orientation="h",
         text="view_label",
-        title="Top 10 Most Viewed Product Categories"
+        title="Top 10 Most Viewed Products",
+        labels={
+            "view_count": "View Count",
+            "category_label": "Product"
+        }
     )
 
     viewed_fig.update_traces(
         marker_color=CHART_COLORS["most_viewed"],
         textposition="outside",
-        cliponaxis=False
+        cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>Views: %{x:,}<extra></extra>"
     )
+
+    apply_chart_layout(viewed_fig, height=520, left_margin=180)
 
     viewed_fig.update_layout(
         xaxis_title="View Count",
-        yaxis_title="Product Category",
-        height=520,
-        margin=dict(l=180, r=100, t=80, b=60)
+        yaxis_title="Product"
     )
+
+    viewed_fig.update_xaxes(separatethousands=True)
 
     st.plotly_chart(
         viewed_fig,
-        use_container_width=True
+        width="stretch"
+    )
+
+    viewed_display_df = build_viewed_category_display_table(
+        most_viewed_category_df
     )
 
     st.dataframe(
-        add_rank_column(most_viewed_category_df, "Rank"),
-        use_container_width=True,
+        add_rank_column(viewed_display_df, "Rank"),
+        width="stretch",
         hide_index=True
     )
 
     st.divider()
 
     # =========================
-    # Event Type Distribution
+    # Purchase Value Analysis
     # =========================
-    st.header("Event Type Distribution")
+    st.header("Purchase Value Analysis")
 
-    event_chart_df = event_type_df.copy()
+    value_col1, value_col2 = st.columns(2)
 
-    total_events_sum = event_chart_df["total_events"].sum()
+    with value_col1:
+        st.subheader("Average Purchase Price by Product")
 
-    event_chart_df["percentage"] = (
-        event_chart_df["total_events"] / total_events_sum * 100
-    ).round(2)
+        product_value_df = category_revenue_df.copy()
 
-    event_order = ["view", "cart", "purchase"]
+        product_value_df["product_label"] = product_value_df[
+            "category_code"
+        ].apply(format_category_label)
 
-    event_chart_df["event_type"] = pd.Categorical(
-        event_chart_df["event_type"],
-        categories=event_order,
-        ordered=True
-    )
+        product_value_df["price_label"] = product_value_df[
+            "average_purchase_price"
+        ].apply(format_currency)
 
-    event_chart_df = event_chart_df.sort_values("event_type")
+        product_value_chart_df = product_value_df.sort_values(
+            "average_purchase_price",
+            ascending=False
+        ).head(10).sort_values(
+            "average_purchase_price",
+            ascending=True
+        )
 
-    event_fig = px.bar(
-        event_chart_df,
-        x="total_events",
-        y="event_type",
-        color="event_type",
-        color_discrete_map=EVENT_COLOR_MAP,
-        text="total_events",
-        orientation="h",
-        title="Event Type Distribution by Total Events"
-    )
+        product_value_fig = px.bar(
+            product_value_chart_df,
+            x="average_purchase_price",
+            y="product_label",
+            orientation="h",
+            text="price_label",
+            title="Average Purchase Price of Top Revenue Products",
+            labels={
+                "average_purchase_price": "Average Purchase Price",
+                "product_label": "Product"
+            }
+        )
 
-    event_fig.update_traces(
-        texttemplate="%{x:,}",
-        textposition="outside",
-        cliponaxis=False
-    )
+        product_value_fig.update_traces(
+            marker_color=CHART_COLORS["product_value"],
+            textposition="outside",
+            cliponaxis=False,
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Average Purchase Price: %{x:$,.2f}<extra></extra>"
+            )
+        )
 
-    event_fig.update_layout(
-        xaxis_title="Total Events (Log Scale)",
-        yaxis_title="Event Type",
-        xaxis_type="log",
-        showlegend=False,
-        height=420,
-        margin=dict(l=120, r=100, t=80, b=60)
-    )
+        apply_chart_layout(product_value_fig, height=520, left_margin=150)
 
-    st.plotly_chart(
-        event_fig,
-        use_container_width=True
-    )
+        product_value_fig.update_layout(
+            xaxis_title="Average Purchase Price",
+            yaxis_title="Product"
+        )
 
-    event_display_df = event_chart_df.copy()
+        product_value_fig.update_xaxes(tickprefix="$", separatethousands=True)
 
-    event_display_df["total_events"] = event_display_df["total_events"].apply(
-        lambda x: f"{int(x):,}"
-    )
+        st.plotly_chart(
+            product_value_fig,
+            width="stretch"
+        )
 
-    event_display_df["percentage"] = event_display_df["percentage"].apply(
-        lambda x: f"{x:.2f}%"
-    )
+        product_value_display_df = build_purchase_value_display_table(
+            product_value_df.sort_values(
+                "average_purchase_price",
+                ascending=False
+            ),
+            "category_code",
+            "Product",
+            format_category_label
+        )
 
-    st.dataframe(
-        add_rank_column(event_display_df, "No"),
-        use_container_width=True,
-        hide_index=True
-    )
+        st.dataframe(
+            add_rank_column(product_value_display_df, "Rank"),
+            width="stretch",
+            hide_index=True
+        )
+
+    with value_col2:
+        st.subheader("Average Purchase Price by Brand")
+
+        brand_value_df = brand_revenue_df.copy()
+
+        brand_value_df["brand_label"] = brand_value_df["brand"].apply(
+            format_brand_label
+        )
+
+        brand_value_df["price_label"] = brand_value_df[
+            "average_purchase_price"
+        ].apply(format_currency)
+
+        brand_value_chart_df = brand_value_df.sort_values(
+            "average_purchase_price",
+            ascending=False
+        ).head(10).sort_values(
+            "average_purchase_price",
+            ascending=True
+        )
+
+        brand_value_fig = px.bar(
+            brand_value_chart_df,
+            x="average_purchase_price",
+            y="brand_label",
+            orientation="h",
+            text="price_label",
+            title="Average Purchase Price of Top Revenue Brands",
+            labels={
+                "average_purchase_price": "Average Purchase Price",
+                "brand_label": "Brand"
+            }
+        )
+
+        brand_value_fig.update_traces(
+            marker_color=CHART_COLORS["brand_value"],
+            textposition="outside",
+            cliponaxis=False,
+            hovertemplate=(
+                "<b>%{y}</b><br>"
+                "Average Purchase Price: %{x:$,.2f}<extra></extra>"
+            )
+        )
+
+        apply_chart_layout(brand_value_fig, height=520, left_margin=120)
+
+        brand_value_fig.update_layout(
+            xaxis_title="Average Purchase Price",
+            yaxis_title="Brand"
+        )
+
+        brand_value_fig.update_xaxes(tickprefix="$", separatethousands=True)
+
+        st.plotly_chart(
+            brand_value_fig,
+            width="stretch"
+        )
+
+        brand_value_display_df = build_purchase_value_display_table(
+            brand_value_df.sort_values(
+                "average_purchase_price",
+                ascending=False
+            ),
+            "brand",
+            "Brand",
+            format_brand_label
+        )
+
+        st.dataframe(
+            add_rank_column(brand_value_display_df, "Rank"),
+            width="stretch",
+            hide_index=True
+        )
 
     st.divider()
 
@@ -507,22 +785,22 @@ else:
     st.header("Findings Summary")
 
     st.write(
-        f"The product category with the highest purchase revenue is "
-        f"**{top_category['category_code']}**, generating "
+        f"The product with the highest purchase revenue is "
+        f"**{top_category_label}**, generating "
         f"**{format_currency(top_category['total_revenue'])}** from "
         f"**{format_number(top_category['purchase_count'])} purchases**."
     )
 
     st.write(
         f"The brand with the highest purchase revenue is "
-        f"**{top_brand['brand']}**, generating "
+        f"**{top_brand_label}**, generating "
         f"**{format_currency(top_brand['total_revenue'])}** from "
         f"**{format_number(top_brand['purchase_count'])} purchases**."
     )
 
     st.write(
-        f"The most viewed product category is "
-        f"**{most_viewed_category['category_code']}**, with "
+        f"The most viewed product is "
+        f"**{most_viewed_category_label}**, with "
         f"**{format_number(most_viewed_category['view_count'])} views**."
     )
 

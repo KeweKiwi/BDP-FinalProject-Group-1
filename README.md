@@ -557,7 +557,7 @@ Expected dashboard sections:
 * Customer Behavior Funnel
 * Revenue Analysis
 * Browsing Behavior
-* Event Type Distribution
+* Purchase Value Analysis
 * Findings Summary
 
 
@@ -566,12 +566,12 @@ Expected dashboard sections:
 > ![Streamlit Overview and Funnel](screenshots/streamlit_overview_funnel.png)
 
 
-> This screenshot presents the revenue analysis section of the dashboard. It highlights the highest-performing product categories and brands based on historical purchase revenue generated from the October 2019 dataset.
+> This screenshot presents the revenue analysis section of the dashboard. It highlights the highest-performing products and brands based on historical purchase revenue generated from the October 2019 dataset.
 >
 > ![Streamlit Revenue Analysis](screenshots/streamlit_revenue_analysis.png)
 
 
-> This screenshot shows the findings summary section, which consolidates the main insights generated from the batch analysis. The summary highlights customer behavior trends, top-performing categories, leading brands, and overall conversion performance.
+> This screenshot shows the findings summary section, which consolidates the main insights generated from the batch analysis. The summary highlights customer behavior trends, top-performing products, leading brands, and overall conversion performance.
 >
 > ![Streamlit Findings Summary](screenshots/streamlit_findings_summary.png)
 
@@ -616,17 +616,19 @@ Final batch results from the full October 2019 dataset:
 * Total views: 40,779,399
 * Total cart additions: 926,516
 * Total purchases: 742,849
-* Top revenue category: electronics.smartphone
-* Top category revenue: $157,049,623.37
-* Top category purchase count: 338,018
+* Top revenue product: Smartphone
+* Raw source value: `electronics.smartphone`
+* Top product revenue: $157,049,623.37
+* Top product purchase count: 338,018
 * Top revenue brand: apple
 * Top brand revenue: $111,209,268.82
 * Top brand purchase count: 142,873
-* Most viewed category: electronics.smartphone
+* Most viewed product: Smartphone
+* Raw source value: `electronics.smartphone`
 * Most viewed count: 10,619,448
 * Conversion rate: 1.82%
 
-The full October 2019 dataset shows that customer behavior is highly concentrated in product viewing. The `electronics.smartphone` category dominates both revenue and views, while `apple` is the highest revenue-generating brand. The low conversion rate indicates that only a small portion of product views result in purchases.
+The full October 2019 dataset shows that customer behavior is highly concentrated in product viewing. Smartphone dominates both revenue and views, while Apple is the highest revenue-generating brand. The low conversion rate indicates that only a small portion of product views result in purchases.
 
 ## 10. Known Limitations
 
