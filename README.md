@@ -6,17 +6,7 @@ This project builds an end-to-end batch big data pipeline for analyzing historic
 
 ## 1. Architecture Diagram
 
-```mermaid
-flowchart TD
-    A["2019-Oct.csv<br/>Full Dataset"]
-    --> B["Docker Compose<br/>HDFS + Spark"]
-    B --> C["HDFS Raw Data<br/>/user/bdp/raw/2019-Oct.csv"]
-    C --> D["Spark SQL Processing<br/>jobs/batch_hdfs_sql_analysis.py"]
-    D --> E["Processed Tables<br/>/user/bdp/processed"]
-    E --> F["Dashboard CSV Files<br/>output/dashboard"]
-    F --> G["Streamlit Dashboard<br/>localhost:8501"]
-    G --> H["Final Insights<br/>Revenue, Views, Conversion, Funnel"]
-```
+> ![Architecture Diagram](screenshots/bdp_architecture.png)
 
 
 > The screenshot below demonstrates the HDFS environment that supports the architecture shown above. After the dataset is uploaded into HDFS, Spark SQL reads the raw data from distributed storage, performs batch analytical processing, and writes the processed results back to HDFS before exporting dashboard-ready CSV files for Streamlit visualization.
