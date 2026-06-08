@@ -39,9 +39,9 @@ E-commerce platforms generate large volumes of customer interaction data, includ
 
 This project answers the following batch analytical questions:
 
-1. Which product categories generate the highest purchase revenue?
+1. Which product generate the highest purchase revenue?
 2. Which brands contribute the most to total purchase revenue?
-3. What are the most viewed product categories?
+3. What are the most viewed product?
 4. What is the historical conversion rate from product views to purchases?
 5. How do customer actions progress across the funnel: view → cart → purchase?
 
@@ -437,7 +437,7 @@ view      40,779,399
 cart         926,516
 purchase     742,849
 === Query 1: Category Revenue Table ===
-Top category: electronics.smartphone
+Top category: smartphone
 total_revenue = $157,049,623.37
 purchase_count = 338,018
 === Query 2: Brand Revenue Table ===
@@ -445,7 +445,7 @@ Top brand: apple
 total_revenue = $111,209,268.82
 purchase_count = 142,873
 === Query 3: Most Viewed Category Table ===
-Top viewed category: electronics.smartphone
+Top viewed category: smartphone
 view_count = 10,619,448
 === Query 4: Conversion Rate Table ===
 total_views = 40,779,399
