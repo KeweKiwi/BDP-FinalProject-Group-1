@@ -95,17 +95,26 @@ event_type_count_df.show(truncate=False)
 save_table(event_type_count_df, "event_type_count_table")
 
 
-print("=== Query 1: Category Revenue Table ===")
+# Keep raw category_code for traceability, and add product_name for dashboard labels.
+print("=== Query 1: Product Revenue Table ===")
 category_revenue_df = spark.sql("""
+    WITH purchase_events AS (
+        SELECT
+            category_code,
+            INITCAP(REPLACE(REGEXP_EXTRACT(category_code, '[^.]+$', 0), '_', ' ')) AS product_name,
+            price
+        FROM ecommerce_events
+        WHERE event_type = 'purchase'
+          AND category_code IS NOT NULL
+    )
     SELECT
         category_code,
+        product_name,
         ROUND(SUM(price), 2) AS total_revenue,
         COUNT(*) AS purchase_count,
         ROUND(AVG(price), 2) AS average_purchase_price
-    FROM ecommerce_events
-    WHERE event_type = 'purchase'
-      AND category_code IS NOT NULL
-    GROUP BY category_code
+    FROM purchase_events
+    GROUP BY category_code, product_name
     ORDER BY total_revenue DESC
     LIMIT 20
 """)
@@ -133,15 +142,22 @@ brand_revenue_df.show(20, truncate=False)
 save_table(brand_revenue_df, "brand_revenue_table")
 
 
-print("=== Query 3: Most Viewed Category Table ===")
+print("=== Query 3: Most Viewed Product Table ===")
 most_viewed_category_df = spark.sql("""
+    WITH view_events AS (
+        SELECT
+            category_code,
+            INITCAP(REPLACE(REGEXP_EXTRACT(category_code, '[^.]+$', 0), '_', ' ')) AS product_name
+        FROM ecommerce_events
+        WHERE event_type = 'view'
+          AND category_code IS NOT NULL
+    )
     SELECT
         category_code,
+        product_name,
         COUNT(*) AS view_count
-    FROM ecommerce_events
-    WHERE event_type = 'view'
-      AND category_code IS NOT NULL
-    GROUP BY category_code
+    FROM view_events
+    GROUP BY category_code, product_name
     ORDER BY view_count DESC
     LIMIT 20
 """)

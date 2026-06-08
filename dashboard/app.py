@@ -133,6 +133,31 @@ def format_category_label(category_code):
     return format_label_token(parts[-1])
 
 
+def is_non_empty_value(value):
+    return not pd.isna(value) and bool(str(value).strip())
+
+
+def get_product_label(row):
+    if "product_name" in row.index and is_non_empty_value(row["product_name"]):
+        return format_label_token(row["product_name"])
+
+    if "category_code" in row.index:
+        return format_category_label(row["category_code"])
+
+    return "Unknown Product"
+
+
+def add_product_label_column(df, label_column="product_label"):
+    product_df = df.copy()
+
+    if product_df.empty:
+        product_df[label_column] = []
+        return product_df
+
+    product_df[label_column] = product_df.apply(get_product_label, axis=1)
+    return product_df
+
+
 def format_brand_label(brand):
     if pd.isna(brand):
         return "Unknown Brand"
@@ -164,10 +189,38 @@ def build_revenue_display_table(df, source_column, display_column, label_formatt
     })
 
 
-def build_viewed_category_display_table(df):
+def build_product_revenue_display_table(df):
+    product_df = add_product_label_column(df)
+
     return pd.DataFrame({
-        "Product": df["category_code"].apply(format_category_label),
-        "Views": df["view_count"].apply(format_number)
+        "Product": product_df["product_label"],
+        "Total Revenue": product_df["total_revenue"].apply(format_currency),
+        "Purchases": product_df["purchase_count"].apply(format_number),
+        "Average Purchase Price": product_df[
+            "average_purchase_price"
+        ].apply(format_currency)
+    })
+
+
+def build_viewed_product_display_table(df):
+    product_df = add_product_label_column(df)
+
+    return pd.DataFrame({
+        "Product": product_df["product_label"],
+        "Views": product_df["view_count"].apply(format_number)
+    })
+
+
+def build_product_purchase_value_display_table(df):
+    product_df = add_product_label_column(df)
+
+    return pd.DataFrame({
+        "Product": product_df["product_label"],
+        "Average Purchase Price": product_df[
+            "average_purchase_price"
+        ].apply(format_currency),
+        "Purchases": product_df["purchase_count"].apply(format_number),
+        "Total Revenue": product_df["total_revenue"].apply(format_currency)
     })
 
 
@@ -262,11 +315,9 @@ else:
     top_brand = brand_revenue_df.iloc[0]
     most_viewed_category = most_viewed_category_df.iloc[0]
 
-    top_category_label = format_category_label(top_category["category_code"])
+    top_category_label = get_product_label(top_category)
     top_brand_label = format_brand_label(top_brand["brand"])
-    most_viewed_category_label = format_category_label(
-        most_viewed_category["category_code"]
-    )
+    most_viewed_category_label = get_product_label(most_viewed_category)
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -425,11 +476,9 @@ else:
     with left_col:
         st.subheader("Top Products by Purchase Revenue")
 
-        category_chart_df = category_revenue_df.head(10).copy()
-
-        category_chart_df["category_label"] = category_chart_df[
-            "category_code"
-        ].apply(format_category_label)
+        category_chart_df = add_product_label_column(
+            category_revenue_df.head(10).copy()
+        )
 
         category_chart_df["revenue_label"] = category_chart_df["total_revenue"].apply(
             format_million_currency
@@ -443,13 +492,13 @@ else:
         category_fig = px.bar(
             category_chart_df,
             x="total_revenue",
-            y="category_label",
+            y="product_label",
             orientation="h",
             text="revenue_label",
             title="Top 10 Products by Purchase Revenue",
             labels={
                 "total_revenue": "Total Revenue",
-                "category_label": "Product"
+                "product_label": "Product"
             }
         )
 
@@ -474,11 +523,8 @@ else:
             width="stretch"
         )
 
-        category_display_df = build_revenue_display_table(
-            category_revenue_df,
-            "category_code",
-            "Product",
-            format_category_label
+        category_display_df = build_product_revenue_display_table(
+            category_revenue_df
         )
 
         st.dataframe(
@@ -561,11 +607,9 @@ else:
 
     st.subheader("Most Viewed Products")
 
-    viewed_chart_df = most_viewed_category_df.head(10).copy()
-
-    viewed_chart_df["category_label"] = viewed_chart_df[
-        "category_code"
-    ].apply(format_category_label)
+    viewed_chart_df = add_product_label_column(
+        most_viewed_category_df.head(10).copy()
+    )
 
     viewed_chart_df["view_label"] = viewed_chart_df["view_count"].apply(
         lambda x: f"{int(x) / 1_000_000:.1f}M"
@@ -579,13 +623,13 @@ else:
     viewed_fig = px.bar(
         viewed_chart_df,
         x="view_count",
-        y="category_label",
+        y="product_label",
         orientation="h",
         text="view_label",
         title="Top 10 Most Viewed Products",
         labels={
             "view_count": "View Count",
-            "category_label": "Product"
+            "product_label": "Product"
         }
     )
 
@@ -610,7 +654,7 @@ else:
         width="stretch"
     )
 
-    viewed_display_df = build_viewed_category_display_table(
+    viewed_display_df = build_viewed_product_display_table(
         most_viewed_category_df
     )
 
@@ -632,11 +676,7 @@ else:
     with value_col1:
         st.subheader("Average Purchase Price by Product")
 
-        product_value_df = category_revenue_df.copy()
-
-        product_value_df["product_label"] = product_value_df[
-            "category_code"
-        ].apply(format_category_label)
+        product_value_df = add_product_label_column(category_revenue_df.copy())
 
         product_value_df["price_label"] = product_value_df[
             "average_purchase_price"
@@ -687,14 +727,11 @@ else:
             width="stretch"
         )
 
-        product_value_display_df = build_purchase_value_display_table(
+        product_value_display_df = build_product_purchase_value_display_table(
             product_value_df.sort_values(
                 "average_purchase_price",
                 ascending=False
-            ),
-            "category_code",
-            "Product",
-            format_category_label
+            )
         )
 
         st.dataframe(
