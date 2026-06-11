@@ -700,19 +700,3 @@ data/2019-Nov.csv
 - [x] Screenshots are saved in `screenshots/`
 - [x] `data/2019-Oct.csv`, `output/`, and `venv/` are excluded from GitHub
 
-## 14. Screenshot Checklist
-
-| Screenshot | File Path | Status |
-| --- | --- | --- |
-| Architecture diagram | `screenshots/bdp_architecture.png` | Added |
-| Local dataset file | `screenshots/local_dataset.png` | Added |
-| Docker containers running | `screenshots/docker_ps.png` | Added |
-| HDFS Web UI | `screenshots/hdfs_web_ui.png` | Added |
-| HDFS raw dataset | `screenshots/hdfs_raw_dataset.png` | Added |
-| Spark SQL output part 1 | `screenshots/spark_sql_output_1.png` | Added |
-| Spark SQL output part 2 | `screenshots/spark_sql_output_2.png` | Added |
-| HDFS processed tables | `screenshots/hdfs_processed_tables.png` | Added |
-| Local dashboard CSV output | `screenshots/local_dashboard_csv_output.png` | Added |
-| Streamlit overview and funnel | `screenshots/streamlit_overview_funnel.png` | Added |
-| Streamlit revenue analysis | `screenshots/streamlit_revenue_analysis.png` | Added |
-| Streamlit findings summary | `screenshots/streamlit_findings_summary.png` | Added |
